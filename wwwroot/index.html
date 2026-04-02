@@ -1,0 +1,180 @@
+﻿<!DOCTYPE html>
+<html>
+<body>
+
+    <h2>🚁 Drone System UI</h2>
+
+    <!-- LOGIN -->
+    <h3>Login</h3>
+    <input id="username" placeholder="username">
+    <input id="password" placeholder="password">
+    <button onclick="login()">Login</button>
+
+    <p id="role"></p>
+
+    <hr>
+
+    <!-- ADMIN PANEL -->
+    <h3>Admin Panel</h3>
+
+    <button onclick="addDrone()">Add Drone</button>
+    <button onclick="addOperator()">Add Operator</button>
+    <button onclick="assign()">Assign Drone</button>
+
+    <hr>
+
+    <!-- OPERATOR PANEL -->
+    <h3>Operator Panel</h3>
+
+    <button onclick="move('up')">⬆️</button><br>
+    <button onclick="move('left')">⬅️</button>
+    <button onclick="move('right')">➡️</button><br>
+    <button onclick="move('down')">⬇️</button>
+
+    <br><br>
+
+    <button onclick="takeoff()">Takeoff</button>
+    <button onclick="land()">Land</button>
+    <button onclick="photo()">Photo</button>
+
+    <hr>
+
+    <button onclick="getDrones()">Get Drones</button>
+
+<pre id="output"></pre>
+
+    <script>
+
+        let token = "";
+        let userRole = "";
+
+        // 🔐 LOGIN
+        async function login() {
+            const res = await fetch("/api/v1/login", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    username: document.getElementById("username").value,
+                    password: document.getElementById("password").value
+                })
+            });
+
+            const data = await res.json();
+            token = data.token;
+
+            // decode role
+            const payload = JSON.parse(atob(token.split('.')[1]));
+            userRole = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+
+            document.getElementById("role").innerText = "Role: " + userRole;
+
+            alert("Login successful");
+        }
+
+        // 🚁 ADD DRONE (ADMIN)
+        async function addDrone() {
+            if (userRole !== "Admin") return alert("Only Admin");
+
+            await fetch("/api/v1/drones", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    name: "Falcon",
+                    model: "X1",
+                    battery: 100,
+                    speed: 1,
+                    x: 0,
+                    y: 0,
+                    status: "Idle"
+                })
+            });
+
+            alert("Drone added");
+        }
+
+        // 👨‍✈️ ADD OPERATOR
+        async function addOperator() {
+            if (userRole !== "Admin") return alert("Only Admin");
+
+            await fetch("/api/v1/add-operator", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    username: "op1",
+                    password: "123"
+                })
+            });
+
+            alert("Operator added");
+        }
+
+        // 🔗 ASSIGN
+        async function assign() {
+            if (userRole !== "Admin") return alert("Only Admin");
+
+            await fetch("/api/v1/assign", {
+                method: "POST",
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    droneId: 1,
+                    operatorId: 1
+                })
+            });
+
+            alert("Assigned");
+        }
+
+        // 🎮 MOVE
+        async function move(dir) {
+            await fetch(`/api/v1/move/1?dir=${dir}`, {
+                method: "POST",
+                headers: { "Authorization": "Bearer " + token }
+            });
+        }
+
+        // 🛫 TAKEOFF
+        async function takeoff() {
+            await fetch(`/api/v1/takeoff/1`, {
+                method: "POST",
+                headers: { "Authorization": "Bearer " + token }
+            });
+        }
+
+        // 🛬 LAND
+        async function land() {
+            await fetch(`/api/v1/land/1`, {
+                method: "POST",
+                headers: { "Authorization": "Bearer " + token }
+            });
+        }
+
+        // 📸 PHOTO
+        async function photo() {
+            await fetch(`/api/v1/photo/1`, {
+                method: "POST",
+                headers: { "Authorization": "Bearer " + token }
+            });
+        }
+
+        // 📡 GET DRONES
+        async function getDrones() {
+            const res = await fetch("/api/v1/drones");
+            const data = await res.json();
+
+            document.getElementById("output").innerText =
+                JSON.stringify(data, null, 2);
+        }
+
+    </script>
+
+</body>
+</html>

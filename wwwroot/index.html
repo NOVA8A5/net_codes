@@ -1,180 +1,204 @@
 ﻿<!DOCTYPE html>
 <html>
+<head>
+    <title>Drone System</title>
+    <style>
+        body {
+            font-family: Arial;
+            text-align: center;
+            background: #f2f2f2;
+        }
+
+        .box {
+            background: white;
+            padding: 20px;
+            margin: 20px auto;
+            width: 420px;
+            border-radius: 10px;
+        }
+
+        input, select {
+            padding: 8px;
+            margin: 5px;
+            width: 80%;
+        }
+
+        button {
+            padding: 10px;
+            margin: 5px;
+        }
+    </style>
+</head>
+
 <body>
 
-    <h2>🚁 Drone System UI</h2>
+    <h1>🚁 Drone System</h1>
 
-    <!-- LOGIN -->
-    <h3>Login</h3>
-    <input id="username" placeholder="username">
-    <input id="password" placeholder="password">
-    <button onclick="login()">Login</button>
+    <div class="box">
+        <h3>Login</h3>
+        <input id="username" placeholder="Username"><br>
+        <input id="password" placeholder="Password"><br>
+        <button onclick="login()">Login</button>
+        <p id="role"></p>
+    </div>
 
-    <p id="role"></p>
+    <div class="box" id="adminPanel" style="display:none;">
+        <h3>Admin Panel</h3>
 
-    <hr>
+        <input id="opUsername" placeholder="Operator Username"><br>
+        <input id="opPassword" placeholder="Password"><br>
+        <button onclick="addOperator()">Add Operator</button>
 
-    <!-- ADMIN PANEL -->
-    <h3>Admin Panel</h3>
+        <hr>
 
-    <button onclick="addDrone()">Add Drone</button>
-    <button onclick="addOperator()">Add Operator</button>
-    <button onclick="assign()">Assign Drone</button>
+        <input id="dName" placeholder="Drone Name"><br>
+        <input id="dModel" placeholder="Model"><br>
+        <input id="dBattery" placeholder="Battery"><br>
+        <input id="dSpeed" placeholder="Speed"><br>
+        <button onclick="addDrone()">Add Drone</button>
 
-    <hr>
+        <hr>
 
-    <!-- OPERATOR PANEL -->
-    <h3>Operator Panel</h3>
+        <select id="droneSelect"></select>
+        <select id="operatorSelect"></select>
+        <button onclick="assign()">Assign</button>
+    </div>
 
-    <button onclick="move('up')">⬆️</button><br>
-    <button onclick="move('left')">⬅️</button>
-    <button onclick="move('right')">➡️</button><br>
-    <button onclick="move('down')">⬇️</button>
+    <div class="box" id="operatorPanel" style="display:none;">
+        <h3>Operator Panel</h3>
+        <select id="myDrone"></select><br>
 
-    <br><br>
-
-    <button onclick="takeoff()">Takeoff</button>
-    <button onclick="land()">Land</button>
-    <button onclick="photo()">Photo</button>
-
-    <hr>
-
-    <button onclick="getDrones()">Get Drones</button>
-
-<pre id="output"></pre>
+        <button onclick="move()">Move</button>
+        <button onclick="takeoff()">Takeoff</button>
+        <button onclick="land()">Land</button>
+        <button onclick="photo()">Photo</button>
+        <input id="posX" placeholder="Enter X"><br>
+        <input id="posY" placeholder="Enter Y"><br>
+        <button onclick="moveToPosition()">Move To Position</button>
+    </div>
 
     <script>
+        let token = "", role = "";
 
-        let token = "";
-        let userRole = "";
-
-        // 🔐 LOGIN
         async function login() {
-            const res = await fetch("/api/v1/login", {
+            let res = await fetch("/api/v1/login", {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    username: document.getElementById("username").value,
-                    password: document.getElementById("password").value
-                })
+                body: JSON.stringify({ username: username.value, password: password.value })
             });
 
-            const data = await res.json();
+            let data = await res.json();
             token = data.token;
 
-            // decode role
-            const payload = JSON.parse(atob(token.split('.')[1]));
-            userRole = payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
+            let payload = JSON.parse(atob(token.split('.')[1]));
+            role = payload.role || payload["http://schemas.microsoft.com/ws/2008/06/identity/claims/role"];
 
-            document.getElementById("role").innerText = "Role: " + userRole;
+            document.getElementById("role").innerText = "Role:" + role;
 
-            alert("Login successful");
+            if (role === "Admin") { adminPanel.style.display = "block"; loadAdmin(); }
+            if (role === "Operator") { operatorPanel.style.display = "block"; loadDrone(); }
         }
 
-        // 🚁 ADD DRONE (ADMIN)
-        async function addDrone() {
-            if (userRole !== "Admin") return alert("Only Admin");
-
-            await fetch("/api/v1/drones", {
-                method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + token,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    name: "Falcon",
-                    model: "X1",
-                    battery: 100,
-                    speed: 1,
-                    x: 0,
-                    y: 0,
-                    status: "Idle"
-                })
-            });
-
-            alert("Drone added");
-        }
-
-        // 👨‍✈️ ADD OPERATOR
         async function addOperator() {
-            if (userRole !== "Admin") return alert("Only Admin");
-
             await fetch("/api/v1/add-operator", {
                 method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + token,
-                    "Content-Type": "application/json"
-                },
-                body: JSON.stringify({
-                    username: "op1",
-                    password: "123"
-                })
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify({ username: opUsername.value, password: opPassword.value })
             });
-
             alert("Operator added");
+            loadAdmin();
         }
 
-        // 🔗 ASSIGN
-        async function assign() {
-            if (userRole !== "Admin") return alert("Only Admin");
-
-            await fetch("/api/v1/assign", {
+        async function addDrone() {
+            await fetch("/api/v1/drones", {
                 method: "POST",
-                headers: {
-                    "Authorization": "Bearer " + token,
-                    "Content-Type": "application/json"
-                },
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
                 body: JSON.stringify({
-                    droneId: 1,
-                    operatorId: 1
+                    name: dName.value, model: dModel.value,
+                    battery: parseInt(dBattery.value), speed: parseInt(dSpeed.value),
+                    x: 0, y: 0, status: "Idle"
                 })
             });
+            alert("Drone added");
+            loadAdmin();
+        }
 
+        async function assign() {
+            await fetch("/api/v1/assign", {
+                method: "POST",
+                headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    droneId: parseInt(droneSelect.value),
+                    operatorId: parseInt(operatorSelect.value)
+                })
+            });
             alert("Assigned");
         }
 
-        // 🎮 MOVE
-        async function move(dir) {
-            await fetch(`/api/v1/move/1?dir=${dir}`, {
-                method: "POST",
-                headers: { "Authorization": "Bearer " + token }
+        
+        async function loadAdmin() {
+            let drones = await fetch("/api/v1/drones", {
+                headers: { Authorization: "Bearer " + token }
+            }).then(r => r.json());
+
+            let ops = await fetch("/api/v1/operators", {
+                headers: { Authorization: "Bearer " + token }
+            }).then(r => r.json());
+
+            droneSelect.innerHTML = "";
+            operatorSelect.innerHTML = "";
+
+            console.log("DRONES DATA:", drones); // 🔥 DEBUG
+
+            drones.forEach(d => {
+                let name = d.name || d.Name || ("Drone " + d.id);  // ✅ FIX
+                droneSelect.innerHTML += `<option value="${d.id}">${name}</option>`;
+            });
+
+            ops.forEach(o => {
+                operatorSelect.innerHTML += `<option value="${o.id}">${o.username}</option>`;
             });
         }
+        async function loadDrone() {
+            let d = await fetch("/api/v1/drones", { headers: { Authorization: "Bearer " + token } }).then(r => r.json());
+            myDrone.innerHTML = "";
+            d.forEach(x => myDrone.innerHTML += `<option value="${x.id}">${x.name}</option>`);
+        }
 
-        // 🛫 TAKEOFF
+        async function move() {
+            await fetch(`/api/v1/move/${myDrone.value}`, { method: "POST", headers: { Authorization: "Bearer " + token } });
+        }
         async function takeoff() {
-            await fetch(`/api/v1/takeoff/1`, {
-                method: "POST",
-                headers: { "Authorization": "Bearer " + token }
-            });
+            await fetch(`/api/v1/takeoff/${myDrone.value}`, { method: "POST", headers: { Authorization: "Bearer " + token } });
         }
-
-        // 🛬 LAND
         async function land() {
-            await fetch(`/api/v1/land/1`, {
-                method: "POST",
-                headers: { "Authorization": "Bearer " + token }
-            });
+            await fetch(`/api/v1/land/${myDrone.value}`, { method: "POST", headers: { Authorization: "Bearer " + token } });
         }
-
-        // 📸 PHOTO
         async function photo() {
-            await fetch(`/api/v1/photo/1`, {
+            await fetch(`/api/v1/photo/${myDrone.value}`, { method: "POST", headers: { Authorization: "Bearer " + token } });
+            alert("Photo Taken");
+        }
+        async function moveToPosition() {
+            let x = parseInt(posX.value);
+            let y = parseInt(posY.value);
+
+            await fetch("/api/v1/move-to-position", {
                 method: "POST",
-                headers: { "Authorization": "Bearer " + token }
+                headers: {
+                    "Authorization": "Bearer " + token,
+                    "Content-Type": "application/json"
+                },
+                body: JSON.stringify({
+                    droneId: parseInt(myDrone.value),
+                    x: x,
+                    y: y
+                })
             });
+
+            alert("Drone moved to (" + x + "," + y + ")");
         }
-
-        // 📡 GET DRONES
-        async function getDrones() {
-            const res = await fetch("/api/v1/drones");
-            const data = await res.json();
-
-            document.getElementById("output").innerText =
-                JSON.stringify(data, null, 2);
-        }
-
     </script>
+
 
 </body>
 </html>

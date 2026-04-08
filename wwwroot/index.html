@@ -59,6 +59,13 @@
 
         <hr>
 
+        <h4>Edit selected drone</h4>
+        <input id="editBattery" placeholder="Battery"><br>
+        <input id="editSpeed" placeholder="Speed"><br>
+        <button onclick="updateDrone()">Update Drone</button>
+
+        <hr>
+
         <select id="droneSelect"></select>
         <select id="operatorSelect"></select>
         <button onclick="assign()">Assign</button>
@@ -152,7 +159,8 @@
 
             drones.forEach(d => {
                 let name = d.name || d.Name || ("Drone " + d.id);  // ✅ FIX
-                droneSelect.innerHTML += `<option value="${d.id}">${name}</option>`;
+                let info = `${name} (Battery:${d.battery ?? d.Battery}, Speed:${d.speed ?? d.Speed})`;
+                droneSelect.innerHTML += `<option value="${d.id}">${info}</option>`;
             });
 
             ops.forEach(o => {
@@ -162,7 +170,7 @@
         async function loadDrone() {
             let d = await fetch("/api/v1/drones", { headers: { Authorization: "Bearer " + token } }).then(r => r.json());
             myDrone.innerHTML = "";
-            d.forEach(x => myDrone.innerHTML += `<option value="${x.id}">${x.name}</option>`);
+        d.forEach(x => myDrone.innerHTML += `<option value="${x.id}">${x.name} (Battery:${x.battery}, Speed:${x.speed})</option>`);
         }
 
         async function move() {

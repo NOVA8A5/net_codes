@@ -12,4 +12,5 @@ public class DroneData
     public int X { get; set; }
     public int Y { get; set; }
     public int Battery { get; set; }
+    public int Speed { get; set; }
 }

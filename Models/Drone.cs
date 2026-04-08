@@ -9,6 +9,8 @@ public class Drone
 
     public int Battery { get; set; }
 
+    public int Speed { get; set; }
+
     public string Status { get; set; } = "Idle";
 
     public List<DroneData>? DroneDatas { get; set; }

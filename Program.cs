@@ -167,6 +167,7 @@ var user = await db.Users.FirstOrDefaultAsync(x => x.Username == username);
                 d.X,
                 d.Y,
                 d.Battery,
+                d.Speed,
                 d.Status
             }).ToListAsync());
     }
@@ -185,6 +186,7 @@ var user = await db.Users.FirstOrDefaultAsync(x => x.Username == username);
             d.X,
             d.Y,
             d.Battery,
+            d.Speed,
             d.Status
         }).ToListAsync());
 
@@ -197,6 +199,7 @@ app.MapPost("/api/v1/drones", async (Drone d, AppDbContext db) =>
     if (string.IsNullOrWhiteSpace(d.Name)) d.Name = "Drone";
     if (string.IsNullOrWhiteSpace(d.Status)) d.Status = "Idle";
     if (d.Battery <= 0) d.Battery = 100;
+    if (d.Speed <= 0) d.Speed = 10;
 
 
 db.Drones.Add(d);
@@ -250,7 +253,8 @@ var allowed = await db.Assignments.AnyAsync(a => a.OperatorId == user.Id && a.Dr
         DroneId = drone.Id,
         X = drone.X,
         Y = drone.Y,
-        Battery = drone.Battery
+        Battery = drone.Battery,
+        Speed = drone.Speed
     });
 
     await db.SaveChangesAsync();
@@ -258,6 +262,29 @@ var allowed = await db.Assignments.AnyAsync(a => a.OperatorId == user.Id && a.Dr
 
 
 }).RequireAuthorization("Operator");
+
+// Update drone fields (speed, battery) - Admin only
+app.MapPost("/api/v1/drones/{id}/update", async (int id, UpdateDroneRequest req, AppDbContext db) =>
+{
+    var d = await db.Drones.FindAsync(id);
+    if (d == null) return Results.NotFound();
+
+    if (req.Speed.HasValue) d.Speed = req.Speed.Value;
+    if (req.Battery.HasValue) d.Battery = req.Battery.Value;
+
+    db.DroneDatas.Add(new DroneData
+    {
+        DroneId = d.Id,
+        X = d.X,
+        Y = d.Y,
+        Battery = d.Battery,
+        Speed = d.Speed
+    });
+
+    await db.SaveChangesAsync();
+    return Results.Ok(d);
+
+}).RequireAuthorization("Admin");
 
 // Move +1
 app.MapPost("/api/v1/move/{id}", async (int id, HttpContext ctx, AppDbContext db) =>
@@ -275,6 +302,15 @@ var ok = await db.Assignments.AnyAsync(a => a.OperatorId == user.Id && a.DroneId
     d.X += 1;
     d.Battery -= 2;
 
+    db.DroneDatas.Add(new DroneData
+    {
+        DroneId = d.Id,
+        X = d.X,
+        Y = d.Y,
+        Battery = d.Battery,
+        Speed = d.Speed
+    });
+
     await db.SaveChangesAsync();
     return Results.Ok(d);
 
@@ -287,8 +323,16 @@ app.MapPost("/api/v1/takeoff/{id}", async (int id, HttpContext ctx, AppDbContext
     var d = await db.Drones.FindAsync(id);
     if (d == null) return Results.NotFound();
 
+    d.Status = "Flying";
+    db.DroneDatas.Add(new DroneData
+    {
+        DroneId = d.Id,
+        X = d.X,
+        Y = d.Y,
+        Battery = d.Battery,
+        Speed = d.Speed
+    });
 
-d.Status = "Flying";
     await db.SaveChangesAsync();
 
     return Results.Ok();
@@ -302,8 +346,16 @@ app.MapPost("/api/v1/land/{id}", async (int id, AppDbContext db) =>
     var d = await db.Drones.FindAsync(id);
     if (d == null) return Results.NotFound();
 
+    d.Status = "Landed";
+    db.DroneDatas.Add(new DroneData
+    {
+        DroneId = d.Id,
+        X = d.X,
+        Y = d.Y,
+        Battery = d.Battery,
+        Speed = d.Speed
+    });
 
-d.Status = "Landed";
     await db.SaveChangesAsync();
 
     return Results.Ok();

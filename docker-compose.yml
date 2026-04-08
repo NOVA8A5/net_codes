@@ -1,0 +1,31 @@
+version: "3.8"
+
+services:
+  db:
+    image: mcr.microsoft.com/mssql/server:2022-latest
+    environment:
+      SA_PASSWORD: "Your_strong_Password1!"
+      ACCEPT_EULA: "Y"
+    ports:
+      - "1433:1433"
+    volumes:
+      - mssqldata:/var/opt/mssql
+
+  api:
+    build: .
+    depends_on:
+      - db
+    environment:
+      - ConnectionStrings__Default=Server=db,1433;Database=DroneDB;User Id=sa;Password=Your_strong_Password1!;TrustServerCertificate=True;
+      - DB_HOST=db
+      - DB_PORT=1433
+      - Jwt__Key=THIS_IS_MY_SUPER_SECRET_KEY_1234567890_ABCDEF
+      - Jwt__Issuer=DroneAPI
+      - Jwt__Audience=DroneUsers
+      - Jwt__ExpireMinutes=60
+    ports:
+      - "5000:80"
+
+volumes:
+  mssqldata:
+    driver: local

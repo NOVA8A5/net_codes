@@ -1,0 +1,10 @@
+bin/
+obj/
+.vs/
+*.user
+*.suo
+**/node_modules
+**/*.db
+**/publish/
+.Dockerfile
+docker-compose.*.yml

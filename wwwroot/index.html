@@ -171,19 +171,30 @@
             console.log("DRONES DATA:", drones); // 🔥 DEBUG
 
             drones.forEach(d => {
-                let name = d.name || d.Name || ("Drone " + d.id);  // ✅ FIX
-                let info = `${name} (Speed:${d.speed ?? d.Speed})`;
-                droneSelect.innerHTML += `<option value="${d.id}">${info}</option>`;
+                // handle different JSON casing (Id vs id, Name vs name, Speed vs speed)
+                const id = d.id ?? d.Id;
+                const name = d.name ?? d.Name ?? ("Drone " + id);
+                const speed = d.speed ?? d.Speed;
+                const info = `${name} (Speed:${speed})`;
+                droneSelect.innerHTML += `<option value="${id}">${info}</option>`;
             });
 
             ops.forEach(o => {
-                operatorSelect.innerHTML += `<option value="${o.id}">${o.username}</option>`;
+                const id = o.id ?? o.Id;
+                const usernameText = o.username ?? o.Username;
+                operatorSelect.innerHTML += `<option value="${id}">${usernameText}</option>`;
             });
         }
         async function loadDrone() {
             let d = await fetch("/api/v1/drones", { headers: { Authorization: "Bearer " + token } }).then(r => r.json());
             myDrone.innerHTML = "";
-        d.forEach(x => myDrone.innerHTML += `<option value="${x.id}">${x.name} (Battery:${x.battery}, Speed:${x.speed})</option>`);
+        d.forEach(x => {
+            const id = x.id ?? x.Id;
+            const name = x.name ?? x.Name ?? ("Drone " + id);
+            const battery = x.battery ?? x.Battery;
+            const speed = x.speed ?? x.Speed;
+            myDrone.innerHTML += `<option value="${id}">${name} (Battery:${battery}, Speed:${speed})</option>`;
+        });
         }
 
         async function move() {

@@ -286,6 +286,29 @@ app.MapPost("/api/v1/drones/{id}/update", async (int id, UpdateDroneRequest req,
 
 }).RequireAuthorization("Admin");
 
+// Update drone by id (PUT) - Admin
+app.MapPut("/api/v1/drones/{id}", async (int id, UpdateDroneRequest req, AppDbContext db) =>
+{
+    var d = await db.Drones.FindAsync(id);
+    if (d == null) return Results.NotFound();
+
+    if (req.Speed.HasValue) d.Speed = req.Speed.Value;
+    if (req.Battery.HasValue) d.Battery = req.Battery.Value;
+
+    db.DroneDatas.Add(new DroneData
+    {
+        DroneId = d.Id,
+        X = d.X,
+        Y = d.Y,
+        Battery = d.Battery,
+        Speed = d.Speed
+    });
+
+    await db.SaveChangesAsync();
+    return Results.Ok(d);
+
+}).RequireAuthorization("Admin");
+
 // Move +1
 app.MapPost("/api/v1/move/{id}", async (int id, HttpContext ctx, AppDbContext db) =>
 {

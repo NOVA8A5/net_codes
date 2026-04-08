@@ -53,14 +53,12 @@
 
         <input id="dName" placeholder="Drone Name"><br>
         <input id="dModel" placeholder="Model"><br>
-        <input id="dBattery" placeholder="Battery"><br>
         <input id="dSpeed" placeholder="Speed"><br>
         <button onclick="addDrone()">Add Drone</button>
 
         <hr>
 
         <h4>Edit selected drone</h4>
-        <input id="editBattery" placeholder="Battery"><br>
         <input id="editSpeed" placeholder="Speed"><br>
         <button onclick="updateDrone()">Update Drone</button>
 
@@ -116,13 +114,14 @@
             loadAdmin();
         }
 
-        async function addDrone() {
+    async function addDrone() {
             await fetch("/api/v1/drones", {
                 method: "POST",
                 headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
                 body: JSON.stringify({
                     name: dName.value, model: dModel.value,
-                    battery: parseInt(dBattery.value), speed: parseInt(dSpeed.value),
+                    // battery is set server-side (default 100)
+                    speed: parseInt(dSpeed.value),
                     x: 0, y: 0, status: "Idle"
                 })
             });
@@ -142,6 +141,20 @@
             alert("Assigned");
         }
 
+    async function updateDrone() {
+        const id = parseInt(droneSelect.value);
+        const speedVal = editSpeed.value ? parseInt(editSpeed.value) : null;
+
+        await fetch(`/api/v1/drones/${id}/update`, {
+            method: "POST",
+            headers: { Authorization: "Bearer " + token, "Content-Type": "application/json" },
+            body: JSON.stringify({ speed: speedVal })
+        });
+
+        alert("Drone updated");
+        loadAdmin();
+    }
+
         
         async function loadAdmin() {
             let drones = await fetch("/api/v1/drones", {
@@ -159,7 +172,7 @@
 
             drones.forEach(d => {
                 let name = d.name || d.Name || ("Drone " + d.id);  // ✅ FIX
-                let info = `${name} (Battery:${d.battery ?? d.Battery}, Speed:${d.speed ?? d.Speed})`;
+                let info = `${name} (Speed:${d.speed ?? d.Speed})`;
                 droneSelect.innerHTML += `<option value="${d.id}">${info}</option>`;
             });
 

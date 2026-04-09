@@ -14,4 +14,7 @@ public class Drone
     public string Status { get; set; } = "Idle";
 
     public List<DroneData>? DroneDatas { get; set; }
+    
+    // Soft-delete flag
+    public bool IsDeleted { get; set; } = false;
 }

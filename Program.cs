@@ -108,14 +108,14 @@ app.MapPost("/api/v1/add-operator", async (User user, AppDbContext db) =>
 // Get Operators
 app.MapGet("/api/v1/operators", async (AppDbContext db) =>
 {
-    return await db.Users.Where(x => x.Role == "Operator").ToListAsync();
+    return await db.Users.Where(x => x.Role == "Operator" && !x.IsDeleted).ToListAsync();
 }).RequireAuthorization("Admin");
 
 // Login
 app.MapPost("/api/v1/login", async (User u, AppDbContext db) =>
 {
     var user = await db.Users.FirstOrDefaultAsync(x =>
-    x.Username == u.Username && x.Password == u.Password);
+    x.Username == u.Username && x.Password == u.Password && !x.IsDeleted);
 
 
 if (user == null) return Results.Unauthorized();
@@ -160,6 +160,7 @@ var user = await db.Users.FirstOrDefaultAsync(x => x.Username == username);
     if (user.Role == "Admin")
     {
         return Results.Ok(await db.Drones
+            .Where(d => !d.IsDeleted)
             .Select(d => new
             {
                 d.Id,
@@ -178,7 +179,7 @@ var user = await db.Users.FirstOrDefaultAsync(x => x.Username == username);
         .ToListAsync();
 
     return Results.Ok(await db.Drones
-        .Where(d => ids.Contains(d.Id))
+        .Where(d => ids.Contains(d.Id) && !d.IsDeleted)
         .Select(d => new
         {
             d.Id,
@@ -212,11 +213,12 @@ db.Drones.Add(d);
 // ================= ASSIGN =================
 app.MapPost("/api/v1/assign", async (Assignment a, AppDbContext db) =>
 {
-    if (!await db.Drones.AnyAsync(x => x.Id == a.DroneId))
+    if (!await db.Drones.AnyAsync(x => x.Id == a.DroneId && !x.IsDeleted))
         return Results.BadRequest("Drone not found");
 
 
-if (!await db.Users.AnyAsync(x => x.Id == a.OperatorId))
+
+    if (!await db.Users.AnyAsync(x => x.Id == a.OperatorId && !x.IsDeleted))
         return Results.BadRequest("Operator not found");
 
     if (await db.Assignments.AnyAsync(x => x.DroneId == a.DroneId))
@@ -226,6 +228,34 @@ if (!await db.Users.AnyAsync(x => x.Id == a.OperatorId))
     await db.SaveChangesAsync();
     return Results.Ok("Assigned");
 
+
+}).RequireAuthorization("Admin");
+
+// Soft-delete operator
+app.MapDelete("/api/v1/operators/{id}", async (int id, AppDbContext db) =>
+{
+    var u = await db.Users.FindAsync(id);
+    if (u == null || u.Role != "Operator") return Results.NotFound();
+
+    u.IsDeleted = true;
+    await db.SaveChangesAsync();
+    return Results.Ok("Operator deleted (soft)");
+
+}).RequireAuthorization("Admin");
+
+// Soft-delete drone
+app.MapDelete("/api/v1/drones/{id}", async (int id, AppDbContext db) =>
+{
+    var d = await db.Drones.FindAsync(id);
+    if (d == null) return Results.NotFound();
+
+    d.IsDeleted = true;
+    // optional: remove existing assignments for this drone
+    var assignments = db.Assignments.Where(a => a.DroneId == id);
+    db.Assignments.RemoveRange(assignments);
+
+    await db.SaveChangesAsync();
+    return Results.Ok("Drone deleted (soft)");
 
 }).RequireAuthorization("Admin");
 

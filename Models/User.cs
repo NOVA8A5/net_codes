@@ -8,4 +8,7 @@ public class User
     public string Password { get; set; }
 
     public string Role { get; set; } // Admin / Operator
+    
+    // Soft-delete flag
+    public bool IsDeleted { get; set; } = false;
 }

@@ -67,6 +67,8 @@
         <select id="droneSelect"></select>
         <select id="operatorSelect"></select>
         <button onclick="assign()">Assign</button>
+        <button onclick="deleteDrone()">Delete Drone</button>
+        <button onclick="deleteOperator()">Delete Operator</button>
     </div>
 
     <div class="box" id="operatorPanel" style="display:none;">
@@ -139,6 +141,22 @@
                 })
             });
             alert("Assigned");
+        }
+
+        async function deleteDrone() {
+            const id = parseInt(droneSelect.value);
+            if (!id) { alert('Select a drone'); return; }
+            await fetch(`/api/v1/drones/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+            alert('Drone deleted (soft)');
+            loadAdmin();
+        }
+
+        async function deleteOperator() {
+            const id = parseInt(operatorSelect.value);
+            if (!id) { alert('Select an operator'); return; }
+            await fetch(`/api/v1/operators/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+            alert('Operator deleted (soft)');
+            loadAdmin();
         }
 
     async function updateDrone() {

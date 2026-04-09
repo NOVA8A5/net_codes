@@ -237,7 +237,11 @@ app.MapDelete("/api/v1/operators/{id}", async (int id, AppDbContext db) =>
     var u = await db.Users.FindAsync(id);
     if (u == null || u.Role != "Operator") return Results.NotFound();
 
+    // mark deleted and remove assignments
     u.IsDeleted = true;
+    var opAssignments = db.Assignments.Where(a => a.OperatorId == id).ToList();
+    if (opAssignments.Any()) db.Assignments.RemoveRange(opAssignments);
+
     await db.SaveChangesAsync();
     return Results.Ok("Operator deleted (soft)");
 
@@ -250,9 +254,9 @@ app.MapDelete("/api/v1/drones/{id}", async (int id, AppDbContext db) =>
     if (d == null) return Results.NotFound();
 
     d.IsDeleted = true;
-    // optional: remove existing assignments for this drone
-    var assignments = db.Assignments.Where(a => a.DroneId == id);
-    db.Assignments.RemoveRange(assignments);
+    // remove assignments for this drone (evaluate query first)
+    var assignments = db.Assignments.Where(a => a.DroneId == id).ToList();
+    if (assignments.Any()) db.Assignments.RemoveRange(assignments);
 
     await db.SaveChangesAsync();
     return Results.Ok("Drone deleted (soft)");

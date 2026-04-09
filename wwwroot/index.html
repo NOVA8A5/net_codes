@@ -69,6 +69,12 @@
         <button onclick="assign()">Assign</button>
         <button onclick="deleteDrone()">Delete Drone</button>
         <button onclick="deleteOperator()">Delete Operator</button>
+        <hr>
+        <h4>Delete by Id</h4>
+        <input id="delDroneId" placeholder="Drone Id"><br>
+        <button onclick="deleteDroneById()">Delete Drone by Id</button>
+        <input id="delOperatorId" placeholder="Operator Id"><br>
+        <button onclick="deleteOperatorById()">Delete Operator by Id</button>
     </div>
 
     <div class="box" id="operatorPanel" style="display:none;">
@@ -154,6 +160,22 @@
         async function deleteOperator() {
             const id = parseInt(operatorSelect.value);
             if (!id) { alert('Select an operator'); return; }
+            await fetch(`/api/v1/operators/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+            alert('Operator deleted (soft)');
+            loadAdmin();
+        }
+
+        async function deleteDroneById() {
+            const id = parseInt(delDroneId.value);
+            if (!id) { alert('Enter drone id'); return; }
+            await fetch(`/api/v1/drones/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
+            alert('Drone deleted (soft)');
+            loadAdmin();
+        }
+
+        async function deleteOperatorById() {
+            const id = parseInt(delOperatorId.value);
+            if (!id) { alert('Enter operator id'); return; }
             await fetch(`/api/v1/operators/${id}`, { method: 'DELETE', headers: { Authorization: 'Bearer ' + token } });
             alert('Operator deleted (soft)');
             loadAdmin();
